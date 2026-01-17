@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生物運輸大冒險</title>
+    <style>
+        :root {
+            --primary-color: #66bb6a; /* 柔和綠 */
+            --secondary-color: #42a5f5; /* 天空藍 */
+            --accent-color: #ec407a; /* 粉紅色 */
+            --bg-color: #e8f5e9;
+            --text-color: #37474f;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none; /* 防止文字被選取干擾遊戲 */
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- Header & UI --- */
+        header {
+            width: 100%;
+            max-width: 800px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 0 0 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .score-board {
+            color: var(--accent-color);
+        }
+
+        .progress-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 15px;
+            background-color: #cfd8dc;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* --- Screens --- */
+        .screen {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            display: none; /* 預設隱藏 */
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.5s;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Start Screen --- */
+        .title-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            margin-top: 50px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .btn-start, .btn-next {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            margin-top: 20px;
+            font-family: inherit;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(102, 187, 106, 0.4);
+        }
+
+        .btn-start:hover, .btn-next:hover {
+            transform: scale(1.05);
+            background-color: #4caf50;
+        }
+
+        /* --- Game Stages Common --- */
+        .stage-title {
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-left: 5px solid var(--secondary-color);
+        }
+
+        /* --- Stage 1: Plant Structure Specifics --- */
+        .diagram-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+        }
+
+        /* CSS Drawing of Dicot Stem */
+        .stem-circle {
+            width: 100%;
+            height: 100%;
+            background-color: #dcedc8;
+            border-radius: 50%;
+            border: 8px solid #8d6e63; /* 樹皮顏色 */
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Vascular Bundle Representation */
+        .bundle {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background: #fff;
+            left: 50%;
+            top: 10px;
+            transform-origin: center 140px; /* Rotate around center of stem */
+            border-radius: 50% 50% 10px 10px;
+            border: 1px solid #aaa;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Creating 8 bundles in a ring */
+        .bundle:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+        .bundle:nth-child(2) { transform: translateX(-50%) rotate(45deg); }
+        .bundle:nth-child(3) { transform: translateX(-50%) rotate(90deg); }
+        .bundle:nth-child(4) { transform: translateX(-50%) rotate(135deg); }
+        .bundle:nth-child(5) { transform: translateX(-50%) rotate(180deg); }
+        .bundle:nth-child(6) { transform: translateX(-50%) rotate(225deg); }
+        .bundle:nth-child(7) { transform: translateX(-50%) rotate(270deg); }
+        .bundle:nth-child(8) { transform: translateX(-50%) rotate(315deg); }
+
+        /* Detail View for Drop Zones (Magnified Bundle) */
+        .magnified-bundle {
+            width: 200px;
+            height: 300px;
+            background: white;
+            border: 3px solid #555;
+            border-radius: 20px;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .layer-phloem {
+            flex: 2;
+            background-color: #ffccbc; /* Light Orange */
+            border-bottom: 2px dashed #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: #bf360c;
+        }
+
+        .layer-cambium {
+            height: 10px;
+            background-color: #424242; /* Dark Grey */
+            z-index: 2;
+        }
+
+        .layer-xylem {
+            flex: 3;
+            background-color: #b3e5fc; /* Light Blue */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: #01579b;
+        }
+
+        .drop-zone {
+            width: 120px;
+            height: 40px;
+            border: 2px dashed #999;
+            background-color: rgba(255,255,255,0.8);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .drop-zone.active {
+            background-color: #fff9c4;
+            border-color: #fbc02d;
+            transform: scale(1.05);
+        }
+
+        .drop-zone.correct {
+            background-color: #c8e6c9;
+            border-color: #4caf50;
+            border-style: solid;
+            color: #2e7d32;
+        }
+
+        .drop-zone.incorrect {
+            animation: shake 0.5s;
+            background-color: #ffcdd2;
+            border-color: #c62828;
+        }
+
+        /* Interaction Area */
+        .interaction-area {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .draggable-item {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+
+        .draggable-item:hover {
+            transform: translateY(-2px);
+            background-color: #43a047;
+        }
+
+        .draggable-item.selected {
+            background-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .draggable-item.used {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #9e9e9e;
+        }
+
+        /* --- Modal (Feedback) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            animation: popIn 0.3s;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .modal-text {
+            text-align: left;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: white;
+            margin: 0 2px;
+        }
+        .tag-blue { background: #42a5f5; }
+        .tag-orange { background: #ff7043; }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Placeholder Styles for Future Stages */
+        .placeholder-content {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            border-radius: 15px;
+            width: 100%;
+            border: 2px dashed #ccc;
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header / UI -->
+    <header>
+        <div class="game-info">
+            <span>生物運輸大冒險</span>
+        </div>
+        <div class="game-info">
+            <span>第 <span id="stage-indicator">1</span>/5 關</span>
+            <span class="score-board">分數: <span id="score-display">0</span></span>
+        </div>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <main>
+        <!-- Screen 0: Start Screen -->
+        <div id="screen-start" class="screen active">
+            <div class="title-card">
+                <h1>🌱 生物運輸大冒險 🩸</h1>
+                <p>準備好探索植物與動物體內的奧秘了嗎？</p>
+                <div style="font-size: 50px; margin: 20px;">🔬</div>
+                <button class="btn-start" onclick="game.startGame()">開始遊戲</button>
+            </div>
+        </div>
+
+        <!-- Screen 1: Stage 1 (Plant Structure) -->
+        <div id="stage-1" class="screen">
+            <h2 class="stage-title">第一關：植物的運輸構造</h2>
+            <div class="instruction">
+                <p>這是一個雙子葉植物的莖。請將右側的構造名稱，點擊後放入左側放大圖的正確位置！</p>
+                <small>提示：外韌內木</small>
+            </div>
+
+            <div class="interaction-area">
+                <!-- Visual Diagram: Magnified Vascular Bundle -->
+                <div style="text-align: center;">
+                    <h3>維管束放大圖</h3>
+                    <div class="magnified-bundle">
+                        <!-- Phloem (Outside) -->
+                        <div class="layer-phloem">
+                            <div class="drop-zone" data-answer="phloem" onclick="stage1.handleZoneClick(this)">外側構造</div>
+                        </div>
+                        
+                        <!-- Cambium (Middle) -->
+                        <div class="layer-cambium">
+                            <!-- Ideally Cambium is a thin line, let's put the zone slightly overlapping or just indicate order -->
+                        </div>
+                        <div style="position: absolute; top: 40%; width: 100%; display: flex; justify-content: center; z-index: 5;">
+                             <div class="drop-zone" data-answer="cambium" onclick="stage1.handleZoneClick(this)" style="height: 30px; font-size: 0.8rem;">中間構造</div>
+                        </div>
+
+                        <!-- Xylem (Inside) -->
+                        <div class="layer-xylem">
+                            <div class="drop-zone" data-answer="xylem" onclick="stage1.handleZoneClick(this)">內側構造</div>
+                        </div>
+                    </div>
+                    <div style="color: #666; font-size: 0.9rem;">(莖的中心方向 ↓)</div>
+                </div>
+
+                <!-- Schematic of Stem for Context -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="diagram-container">
+                        <div class="stem-circle">
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <div class="bundle"></div>
+                            <!-- Highlight Box -->
+                            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 50px; height: 70px; border: 3px solid var(--accent-color); border-radius: 10px;"></div>
+                        </div>
+                        <div style="position: absolute; top: 0; left: 55%; color: var(--accent-color); font-weight: bold;">放大此處 ➜</div>
+                    </div>
+                    <p style="margin-top: -10px; font-weight: bold; color: #8d6e63;">雙子葉植物莖橫切面</p>
+                    <p style="font-size: 0.9rem;">(維管束環狀排列)</p>
+                </div>
+
+                <!-- Options -->
+                <div class="options-container">
+                    <div>請選擇標籤：</div>
+                    <div class="draggable-item" data-id="xylem" onclick="stage1.selectItem(this)">木質部</div>
+                    <div class="draggable-item" data-id="phloem" onclick="stage1.selectItem(this)">韌皮部</div>
+                    <div class="draggable-item" data-id="cambium" onclick="stage1.selectItem(this)">形成層</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 2: Stage 2 (Placeholder) -->
+        <div id="stage-2" class="screen">
+            <h2 class="stage-title">第二關：植物的運輸機制</h2>
+            <div class="placeholder-content">
+                等待 AI 生成內容...
+            </div>
+        </div>
+
+        <!-- Screen 3: Stage 3 (Placeholder) -->
+        <div id="stage-3" class="screen">
+            <h2 class="stage-title">第三關：動物的運輸構造</h2>
+            <div class="placeholder-content">
+                等待 AI 生成內容...
+            </div>
+        </div>
+
+        <!-- Screen 4: Stage 4 (Placeholder) -->
+        <div id="stage-4" class="screen">
+            <h2 class="stage-title">第四關：動物的運輸循環</h2>
+            <div class="placeholder-content">
+                等待 AI 生成內容...
+            </div>
+        </div>
+
+        <!-- Screen 5: Stage 5 (Placeholder) -->
+        <div id="stage-5" class="screen">
+            <h2 class="stage-title">第五關：運輸大挑戰</h2>
+            <div class="placeholder-content">
+                等待 AI 生成內容...
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="screen-end" class="screen">
+            <div class="title-card">
+                <h1>恭喜通關！🎉</h1>
+                <p>您已完成所有挑戰！</p>
+                <h2 style="color: var(--accent-color);">最終得分：<span id="final-score">0</span></h2>
+                <button class="btn-start" onclick="location.reload()">再玩一次</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal for Feedback -->
+    <div id="feedback-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modal-title">標題</h2>
+            <div class="modal-text" id="modal-body">內容</div>
+            <button class="btn-next" id="modal-btn" onclick="game.closeModal()">繼續</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State & Core Logic ---
+        const game = {
+            score: 0,
+            currentStage: 0,
+            totalStages: 5,
+            
+            startGame: function() {
+                this.score = 0;
+                this.currentStage = 1;
+                this.updateUI();
+                this.showScreen('stage-1');
+            },
+
+            updateUI: function() {
+                document.getElementById('score-display').innerText = this.score;
+                document.getElementById('stage-indicator').innerText = this.currentStage;
+                let percent = ((this.currentStage - 1) / this.totalStages) * 100;
+                document.getElementById('progress-bar').style.width = percent + '%';
+            },
+
+            addScore: function(points) {
+                this.score += points;
+                // Simple count-up animation logic could go here
+                document.getElementById('score-display').innerText = this.score;
+            },
+
+            showScreen: function(screenId) {
+                // Hide all screens
+                document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+                // Show target screen
+                document.getElementById(screenId).classList.add('active');
+            },
+
+            nextStage: function() {
+                this.currentStage++;
+                this.updateUI();
+                
+                if (this.currentStage > this.totalStages) {
+                    document.getElementById('final-score').innerText = this.score;
+                    document.getElementById('progress-bar').style.width = '100%';
+                    this.showScreen('screen-end');
+                } else {
+                    this.showScreen('stage-' + this.currentStage);
+                }
+            },
+
+            showModal: function(title, text, btnAction) {
+                document.getElementById('modal-title').innerText = title;
+                document.getElementById('modal-body').innerHTML = text;
+                const btn = document.getElementById('modal-btn');
+                
+                // Remove old event listeners by cloning
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.onclick = function() {
+                    document.getElementById('feedback-modal').style.display = 'none';
+                    if (btnAction) btnAction();
+                };
+                
+                document.getElementById('feedback-modal').style.display = 'flex';
+            },
+
+            closeModal: function() {
+                document.getElementById('feedback-modal').style.display = 'none';
+            }
+        };
+
+        // --- Stage 1 Logic: Plant Transport Structure ---
+        const stage1 = {
+            selectedItem: null,
+            matches: 0,
+            totalMatchesNeeded: 3,
+
+            selectItem: function(element) {
+                if (element.classList.contains('used')) return;
+
+                // Deselect others
+                document.querySelectorAll('.draggable-item').forEach(el => el.classList.remove('selected'));
+                
+                // Select this
+                element.classList.add('selected');
+                this.selectedItem = element;
+            },
+
+            handleZoneClick: function(zone) {
+                if (!this.selectedItem) return;
+                if (zone.classList.contains('correct')) return; // Already solved
+
+                const selectedId = this.selectedItem.getAttribute('data-id');
+                const zoneAnswer = zone.getAttribute('data-answer');
+
+                if (selectedId === zoneAnswer) {
+                    // Correct
+                    this.markCorrect(zone, this.selectedItem);
+                    game.addScore(20); // 20 points per match
+                    this.matches++;
+                    
+                    if (this.matches === this.totalMatchesNeeded) {
+                        setTimeout(() => this.stageComplete(), 500);
+                    }
+                } else {
+                    // Incorrect
+                    zone.classList.add('incorrect');
+                    setTimeout(() => zone.classList.remove('incorrect'), 500);
+                }
+            },
+
+            markCorrect: function(zone, item) {
+                zone.classList.add('correct');
+                zone.innerText = item.innerText;
+                zone.style.cursor = 'default';
+                
+                item.classList.remove('selected');
+                item.classList.add('used');
+                this.selectedItem = null;
+            },
+
+            stageComplete: function() {
+                const explanation = `
+                    <p><strong>太棒了！完全正確！</strong></p>
+                    <ul style="text-align:left; padding-left:20px;">
+                        <li><span class="tag tag-orange">韌皮部</span>：位於外側，負責運送養分（光合作用產物），可雙向運輸。</li>
+                        <li><span class="tag tag-blue">木質部</span>：位於內側，負責運送水分與礦物質，只能單向向上運輸。</li>
+                        <li><strong>形成層</strong>：位於中間，向外長出韌皮部，向內長出木質部，使莖逐年加粗。</li>
+                        <li><strong>排列方式</strong>：這是「環狀排列」，常見於雙子葉植物（如向日葵、榕樹）；單子葉植物（如玉米）則是「散生排列」且無形成層。</li>
+                    </ul>
+                `;
+                
+                game.showModal("第一關 通關成功！", explanation, () => {
+                    game.nextStage();
+                });
+            }
+        };
+
+        // Initialize (Show start screen is default in HTML structure)
+    </script>
+</body>
+</html>
